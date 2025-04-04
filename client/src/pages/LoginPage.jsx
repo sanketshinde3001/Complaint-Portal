@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
-import { useAuth } from '../contexts/AuthContext'; // Import useAuth
+import { useAuth } from '../contexts/AuthContext';
 
 function LoginPage() {
-  // Hooks moved inside the component function
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -12,7 +11,7 @@ function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth(); // Get login function from context
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -29,13 +28,8 @@ function LoginPage() {
         password: formData.password,
       });
 
-      // Assuming the backend sends back { status: 'success', token, data: { user } }
       const { token, data } = response.data;
-
-      // Update auth context with user data and token
       login(data.user, token);
-
-      // Redirect to home page (or admin dashboard if admin)
       navigate(data.user.role === 'admin' ? '/admin' : '/');
 
     } catch (err) {
@@ -47,55 +41,105 @@ function LoginPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-semibold text-center mb-6">Login</h1>
-      <form onSubmit={handleSubmit}>
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-            Email
-          </label>
-          <input
-            type="email"
-            name="email"
-            id="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
+    <div className="max-h-screen flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-gray-900">
+      <div className="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
+        <div>
+          <h1 className="text-center text-2xl font-bold text-white">Sign in to your account</h1>
+          <p className="mt-2 text-center text-sm text-gray-400">
+            Or{' '}
+            <Link to="/signup" className="font-medium text-blue-400 hover:text-blue-300 transition-colors duration-200">
+              create a new account
+            </Link>
+          </p>
         </div>
 
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-            Password
-          </label>
-          <input
-            type="password"
-            name="password"
-            id="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-          {/* TODO: Add Forgot Password link */}
-        </div>
+        {error && (
+          <div className="bg-red-900/40 border border-red-500 text-red-300 px-4 py-3 rounded relative" role="alert">
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
 
-        <div className="flex items-center justify-between">
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {isLoading ? 'Logging In...' : 'Login'}
-          </button>
-          <Link to="/signup" className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
-            Create Account
-          </Link>
-        </div>
-      </form>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-900 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Email address"
+              />
+            </div>
+            <div className="mt-4">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={formData.password}
+                onChange={handleChange}
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-900 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-700 rounded bg-gray-900"
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
+                Remember me
+              </label>
+            </div>
+
+            <div className="text-sm">
+              <Link to="/forgot-password" className="font-medium text-blue-400 hover:text-blue-300 transition-colors duration-200">
+                Forgot your password?
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 ${
+                isLoading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Signing in...
+                </>
+              ) : (
+                'Sign in'
+              )}
+            </button>
+          </div>
+        </form>
+
+
+      </div>
     </div>
   );
 }
