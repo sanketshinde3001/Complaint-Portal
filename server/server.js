@@ -8,12 +8,7 @@ dotenv.config();
 
 const app = express();
 
-// --- Routes --- (Define Routers First)
-const authRouter = require('./routes/authRoutes');
-const complaintRouter = require('./routes/complaintRoutes'); // Handles multipart/form-data
-const adminRouter = require('./routes/adminRoutes');
-
-// Middleware
+// --- Middleware ---
 app.use(cors({
   origin: [
     'https://complaint-portal-pi.vercel.app',
@@ -22,53 +17,59 @@ app.use(cors({
   credentials: true
 }));
 
+// Debug logger middleware
+app.use((req, res, next) => {
+  console.log(`API HIT: ${req.method} ${req.originalUrl}`);
+  next();
+});
 
-app.use(()=>{
-  console.log("API HIT");
-})
-// --- Route Registration ---
+// --- Routes ---
+const authRouter = require('./routes/authRoutes');
+const complaintRouter = require('./routes/complaintRoutes'); // Handles multipart/form-data
+const adminRouter = require('./routes/adminRoutes');
+
 // Register complaint router BEFORE global JSON parsing
 app.use('/api/v1/complaints', complaintRouter);
 
-// Now apply global JSON parsing for other routes
-app.use(express.json()); // Parse JSON request bodies
+// Global JSON parser (for other routes)
+app.use(express.json());
 
-// Register other routes that expect JSON
+// Other route registrations
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/admin', adminRouter);
 
-// Static file serving (can be here or earlier)
+// Static file serving
 app.use('/uploads', express.static('uploads'));
 
-// Basic route (can be anywhere before error handler)
+// Root route
 app.get('/', (req, res) => {
   res.send('College Complaint Portal API');
 });
 
-// Global Error Handling Middleware (should be LAST)
+// --- Error Handler ---
 app.use((err, req, res, next) => {
-  // Need to import Multer here to check for MulterError instance
   const multer = require('multer');
-  console.error('Unhandled Error:', err.stack || err); // Log stack trace for better debugging
-  // Handle specific errors like Multer errors
+  console.error('Unhandled Error:', err.stack || err);
+
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ status: 'fail', message: `File upload error: ${err.message}` });
   } else if (err.message.startsWith('Invalid file type')) {
-     return res.status(400).json({ status: 'fail', message: err.message });
+    return res.status(400).json({ status: 'fail', message: err.message });
   }
-  // Generic error response
+
   res.status(err.statusCode || 500).json({
     status: err.status || 'error',
     message: err.message || 'Something went wrong!',
-    // Optionally include stack trace in development
-    // stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 
-
-// Database connection
+// --- Database Connection ---
 const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5000;
+
+console.log('Attempting to start server...');
+console.log('PORT:', PORT);
+console.log('MONGO_URI:', MONGO_URI ? 'Found ✅' : 'Missing ❌');
 
 if (!MONGO_URI) {
   console.error('FATAL ERROR: MONGO_URI is not defined.');
@@ -77,10 +78,12 @@ if (!MONGO_URI) {
 
 mongoose.connect(MONGO_URI)
   .then(() => {
-    console.log('MongoDB connected successfully');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    console.log('✅ MongoDB connected successfully');
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
+    });
   })
   .catch(err => {
-    console.error('MongoDB connection error:', err);
+    console.error('❌ MongoDB connection error:', err);
     process.exit(1);
   });
