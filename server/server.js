@@ -22,6 +22,10 @@ app.use(cors({
   credentials: true
 }));
 
+
+app.use(()=>{
+  console.log("API HIT");
+})
 // --- Route Registration ---
 // Register complaint router BEFORE global JSON parsing
 app.use('/api/v1/complaints', complaintRouter);
