@@ -14,7 +14,13 @@ const complaintRouter = require('./routes/complaintRoutes'); // Handles multipar
 const adminRouter = require('./routes/adminRoutes');
 
 // Middleware
-app.use(cors()); // Enable CORS for all origins (adjust for production)
+app.use(cors({
+  origin: [
+    'https://complaint-portal-pi.vercel.app',
+    'http://localhost:5173'
+  ],
+  credentials: true
+}));
 
 // --- Route Registration ---
 // Register complaint router BEFORE global JSON parsing
