@@ -1,16 +1,16 @@
-import React, { useState, useRef } from 'react'; // Import useRef
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api'; // Use the configured Axios instance
+import api from '../services/api';
 
-// Example predefined tags (can be fetched from backend later if dynamic)
+// Example predefined tags
 const PREDEFINED_TAGS = ['hostel', 'college', 'academics', 'infrastructure', 'boys only', 'girls only'];
-// Add department names or allow custom tags
+
 function SubmitComplaintPage() {
-  const fileInputRef = useRef(null); // Create a ref for the file input
+  const fileInputRef = useRef(null);
   const [text, setText] = useState('');
   const [tags, setTags] = useState([]);
   const [customTag, setCustomTag] = useState('');
-  const [mediaFiles, setMediaFiles] = useState([]); // Store File objects
+  const [mediaFiles, setMediaFiles] = useState([]);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,75 +30,61 @@ function SubmitComplaintPage() {
     const newTag = customTag.trim().toLowerCase();
     if (newTag && !tags.includes(newTag) && !PREDEFINED_TAGS.includes(newTag)) {
       setTags([...tags, newTag]);
-      setCustomTag(''); // Clear input after adding
+      setCustomTag('');
     } else if (newTag) {
-        // Optionally alert user if tag already exists or is predefined
-        console.warn("Tag already exists or is predefined:", newTag);
-        setCustomTag(''); // Clear input anyway
+      console.warn("Tag already exists or is predefined:", newTag);
+      setCustomTag('');
     }
   };
 
   const handleFileChange = (e) => {
-    // Handle multiple files, limit count if needed
     if (e.target.files.length > 5) {
-        setError("You can upload a maximum of 5 files.");
-        setMediaFiles([]); // Clear selection
-        e.target.value = null; // Reset file input
-        return;
+      setError("You can upload a maximum of 5 files.");
+      setMediaFiles([]);
+      e.target.value = null;
+      return;
     }
-    const newFiles = Array.from(e.target.files); // Get newly selected files
-
-    // Combine existing and new files
+    
+    const newFiles = Array.from(e.target.files);
     const combinedFiles = [...mediaFiles, ...newFiles];
 
-    // Check total file count limit
     if (combinedFiles.length > 5) {
-        setError("You can upload a maximum of 5 files in total.");
-        // Optionally, reset the input to prevent adding the last batch
-        if (fileInputRef.current) {
-            fileInputRef.current.value = null;
-        }
-        return;
+      setError("You can upload a maximum of 5 files in total.");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null;
+      }
+      return;
     }
 
-    // Optional: Check for duplicates (based on name and size, for example)
-    // This is a basic check, more robust checks might be needed
     const uniqueFiles = combinedFiles.reduce((acc, current) => {
-        const x = acc.find(item => item.name === current.name && item.size === current.size);
-        if (!x) {
-            return acc.concat([current]);
-        } else {
-            return acc;
-        }
+      const x = acc.find(item => item.name === current.name && item.size === current.size);
+      if (!x) {
+        return acc.concat([current]);
+      } else {
+        return acc;
+      }
     }, []);
 
-     // Check if duplicates were removed and adjust limit check if necessary
     if (uniqueFiles.length > 5) {
-        setError("You can upload a maximum of 5 unique files.");
-         if (fileInputRef.current) {
-            fileInputRef.current.value = null;
-        }
-        // Do not update state if limit exceeded after deduplication
-        return;
+      setError("You can upload a maximum of 5 unique files.");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null;
+      }
+      return;
     }
 
+    setError('');
+    setMediaFiles(uniqueFiles);
 
-    setError(''); // Clear previous errors
-    setMediaFiles(uniqueFiles); // Update state with combined and potentially deduplicated list
-
-    // Important: Reset the file input's value after processing.
-    // This allows selecting the same file again if it was removed or if the user wants to re-add it after clearing.
     if (fileInputRef.current) {
-        fileInputRef.current.value = null;
+      fileInputRef.current.value = null;
     }
   };
 
-  // Function to remove a selected file
   const handleRemoveFile = (indexToRemove) => {
     setMediaFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
-    // Reset the file input value if all files are removed to allow re-selection of the same file(s)
     if (mediaFiles.length === 1 && fileInputRef.current) {
-        fileInputRef.current.value = null;
+      fileInputRef.current.value = null;
     }
   };
 
@@ -118,36 +104,23 @@ function SubmitComplaintPage() {
 
     setIsLoading(true);
 
-    // Use FormData for multipart request (including files)
     const formData = new FormData();
     formData.append('text', text);
-    tags.forEach(tag => formData.append('tags[]', tag)); // Send tags as an array
+    tags.forEach(tag => formData.append('tags[]', tag));
     mediaFiles.forEach(file => {
-      formData.append('media', file); // Append each file with the same field name 'media'
+      formData.append('media', file);
     });
 
     try {
-      // Use api instance, content-type will be set automatically for FormData
-      const response = await api.post('/complaints', formData, {
-         headers: {
-           // Axios sets Content-Type to multipart/form-data automatically
-           // when you pass FormData as the body.
-           // Ensure backend (Multer) is configured for field name 'media'.
-         }
-      });
-
+      const response = await api.post('/complaints', formData);
       setSuccessMessage('Complaint submitted successfully! It will be reviewed by an admin.');
-      // Clear form
       setText('');
       setTags([]);
       setCustomTag('');
       setMediaFiles([]);
-      if (fileInputRef.current) { // Clear the file input visually
+      if (fileInputRef.current) {
         fileInputRef.current.value = null;
       }
-      // Optionally redirect after delay
-      // setTimeout(() => navigate('/'), 3000);
-
     } catch (err) {
       console.error("Complaint submission failed:", err);
       setError(err.response?.data?.message || 'Failed to submit complaint.');
@@ -156,16 +129,21 @@ function SubmitComplaintPage() {
     }
   };
 
-
   return (
-    <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-semibold text-center mb-6">Submit a New Complaint</h1>
-      <form onSubmit={handleSubmit}>
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-        {successMessage && <p className="text-green-500 text-sm mb-4">{successMessage}</p>}
+    <div className="max-w-4xl mx-auto my-6 p-6 bg-gray-900 rounded-lg shadow-lg text-gray-200">
+      <h1 className="text-2xl font-bold text-center mb-6 text-white">Submit a New Complaint</h1>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <div className="bg-red-900/40 border border-red-500 text-red-300 px-4 py-3 rounded relative" role="alert">
+          <span className="block sm:inline">{error}</span>
+        </div>}
+        
+        {successMessage && <div className="bg-green-900/40 border border-green-500 text-green-300 px-4 py-3 rounded relative" role="alert">
+          <span className="block sm:inline">{successMessage}</span>
+        </div>}
 
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="text">
+        <div>
+          <label className="block text-gray-300 text-sm font-medium mb-2" htmlFor="text">
             Complaint Details
           </label>
           <textarea
@@ -175,14 +153,14 @@ function SubmitComplaintPage() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow-sm bg-gray-800 border border-gray-700 rounded w-full py-2 px-3 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Describe your complaint in detail..."
           />
         </div>
 
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">Tags</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
+        <div>
+          <label className="block text-gray-300 text-sm font-medium mb-2">Tags</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
             {PREDEFINED_TAGS.map(tag => (
               <div key={tag} className="flex items-center">
                 <input
@@ -191,36 +169,50 @@ function SubmitComplaintPage() {
                   value={tag}
                   checked={tags.includes(tag)}
                   onChange={handleTagChange}
-                  className="mr-2"
+                  className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-700 rounded bg-gray-800"
                 />
-                <label htmlFor={`tag-${tag}`} className="text-sm capitalize">{tag}</label>
+                <label htmlFor={`tag-${tag}`} className="ml-2 text-sm capitalize text-gray-300">{tag}</label>
               </div>
             ))}
           </div>
-           <div className="flex items-center mt-2">
-             <input
-                type="text"
-                value={customTag}
-                onChange={(e) => setCustomTag(e.target.value)}
-                placeholder="Add custom tag (e.g., department name)"
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
-             />
-             <button
-                type="button"
-                onClick={handleAddCustomTag}
-                className="bg-gray-500 hover:bg-gray-700 text-white text-sm font-bold py-2 px-3 rounded focus:outline-none focus:shadow-outline"
-             >
-                Add
-             </button>
-           </div>
-           <div className="mt-2 text-sm text-gray-600">
-             Selected tags: {tags.length > 0 ? tags.join(', ') : 'None'}
-           </div>
+          
+          <div className="flex items-center mt-3">
+            <input
+              type="text"
+              value={customTag}
+              onChange={(e) => setCustomTag(e.target.value)}
+              placeholder="Add custom tag (e.g., department name)"
+              className="shadow-sm bg-gray-800 border border-gray-700 rounded flex-1 py-2 px-3 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
+              type="button"
+              onClick={handleAddCustomTag}
+              className="ml-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+            >
+              Add
+            </button>
+          </div>
+          
+          {tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {tags.map(tag => (
+                <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-900 text-blue-200">
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => setTags(tags.filter(t => t !== tag))}
+                    className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full text-blue-400 hover:bg-blue-800 hover:text-blue-200 focus:outline-none"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
-
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="media">
+        <div>
+          <label className="block text-gray-300 text-sm font-medium mb-2" htmlFor="media">
             Attach Media (Images/Videos, max 5 files, 20MB each)
           </label>
           <input
@@ -230,52 +222,53 @@ function SubmitComplaintPage() {
             multiple
             accept="image/jpeg,image/png,image/gif,video/mp4,video/mpeg,video/quicktime"
             onChange={handleFileChange}
-            className="hidden" // Hide the default input
-            ref={fileInputRef} // Add a ref to trigger click programmatically
+            className="hidden"
+            ref={fileInputRef}
           />
-          {/* Custom Button to trigger file input */}
+          
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="mt-2 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            Choose Files ({mediaFiles.length} selected)
+            Choose Files ({mediaFiles.length}/5)
           </button>
 
-           {/* Display selected files */}
-           {mediaFiles.length > 0 && (
-             <div className="mt-4 border rounded p-3 space-y-2">
-                <h4 className="text-sm font-semibold text-gray-700">Selected Files:</h4>
-                <ul className="list-none space-y-1">
-                  {mediaFiles.map((file, index) => (
-                    <li key={index} className="flex justify-between items-center text-sm bg-gray-50 p-1.5 rounded">
-                      <span>
-                        {file.name} <span className="text-gray-500">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile(index)}
-                        className="ml-2 text-red-500 hover:text-red-700 text-xs font-semibold"
-                        aria-label={`Remove ${file.name}`}
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-             </div>
-           )}
+          {mediaFiles.length > 0 && (
+            <div className="mt-4 border border-gray-700 rounded p-3 bg-gray-800/50">
+              <h4 className="text-sm font-medium text-gray-300 mb-2">Selected Files:</h4>
+              <ul className="space-y-2">
+                {mediaFiles.map((file, index) => (
+                  <li key={index} className="flex justify-between items-center text-sm bg-gray-800 p-2 rounded border border-gray-700">
+                    <span className="truncate max-w-xs">
+                      {file.name} <span className="text-gray-400">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(index)}
+                      className="ml-2 text-red-400 hover:text-red-300 focus:outline-none"
+                      aria-label={`Remove ${file.name}`}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
-        <p className="text-sm text-gray-600 my-4">
+        <div className="rounded-md bg-gray-800 p-4 border border-gray-700">
+          <p className="text-sm text-gray-400">
             Your identity will remain anonymous to other students. Only administrators can see who submitted the complaint for verification purposes.
-        </p>
+          </p>
+        </div>
 
         <div className="flex items-center justify-center">
           <button
             type="submit"
             disabled={isLoading}
-            className={`bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`px-6 py-2 bg-blue-600 text-white font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {isLoading ? 'Submitting...' : 'Submit Complaint'}
           </button>
