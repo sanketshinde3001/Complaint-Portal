@@ -24,7 +24,7 @@ function Navbar() {
     return (
       <nav className="bg-gray-900 text-gray-200 py-4 px-6 shadow-lg border-b border-gray-800">
         <div className="container mx-auto flex justify-between items-center">
-          <span className="text-xl font-bold text-blue-400">Complaint Portal</span>
+          <span className="text-xl font-bold text-blue-400">Student Corner</span>
           <span className="text-sm">Loading...</span>
         </div>
       </nav>
@@ -35,7 +35,7 @@ function Navbar() {
     <nav className="bg-gray-900 text-gray-200 py-4 px-6 shadow-lg border-b border-gray-800">
       <div className="container mx-auto flex flex-wrap justify-between items-center">
         <Link to="/" className="text-xl font-bold text-blue-400 hover:text-blue-300 transition-colors duration-200">
-          Complaint Portal
+          Student Corner
         </Link>
         
         {/* Mobile menu button */}
@@ -69,6 +69,17 @@ function Navbar() {
             </li>
             {isLoggedIn ? (
               <>
+                <li className="w-full lg:w-auto"> {/* Add Petitions Link */}
+                  <NavLink
+                    to="/petitions"
+                    className={({ isActive }) =>
+                      `block py-1 ${isActive ? activeLinkClass : normalLinkClass}`
+                    }
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Petitions
+                  </NavLink>
+                </li>
                 <li className="w-full lg:w-auto">
                   <NavLink
                     to="/submit-complaint"

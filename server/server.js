@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const helmet = require('helmet');
+// Removed mongoSanitize import as it causes errors
+const rateLimit = require('express-rate-limit'); // Import rate-limit
 
 // Load environment variables
 dotenv.config();
@@ -23,18 +26,41 @@ app.use((req, res, next) => {
   next();
 });
 
+// --- Security Middleware ---
+// Set security HTTP headers
+app.use(helmet());
+
+// Removed mongoSanitize middleware usage
+// app.use(mongoSanitize());
+
+// --- Rate Limiting ---
+// Apply to all requests starting with /api/v1/
+const apiLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: 'Too many requests from this IP, please try again after 15 minutes',
+    // Optional: skip successful OPTIONS requests (useful for CORS preflight)
+    // skipSuccessfulRequests: true,
+});
+app.use('/api/v1', apiLimiter); // Apply the limiter to all API routes
+
+
+// Apply global JSON parser BEFORE routes that need it
+// Increase payload size limit (e.g., 10kb for JSON, adjust as needed)
+app.use(express.json({ limit: '10kb' }));
+
+
 // --- Routes ---
 const authRouter = require('./routes/authRoutes');
-const complaintRouter = require('./routes/complaintRoutes'); // Handles multipart/form-data
-const adminRouter = require('./routes/adminRoutes');
+const complaintRouter = require('./routes/complaintRoutes'); // Handles both multipart and JSON (nested)
+const petitionRouter = require('./routes/petitionRoutes'); // Import petition router
+const adminRouter = require('./routes/adminRoutes'); // Handles admin-specific petition routes too
 
-// Register complaint router BEFORE global JSON parsing
-app.use('/api/v1/complaints', complaintRouter);
-
-// Global JSON parser (for other routes)
-app.use(express.json());
-
-// Other route registrations
+// Register routers
+app.use('/api/v1/complaints', complaintRouter); // Multer within this router handles multipart for specific routes
+app.use('/api/v1/petitions', petitionRouter); // Mount petition routes
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/admin', adminRouter);
 

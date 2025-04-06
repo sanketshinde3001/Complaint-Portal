@@ -124,6 +124,8 @@ exports.createComplaint = async (req, res, next) => {
     // Keep status so frontend knows it's pending if needed, or remove if only showing approved
     // delete responseComplaint.status;
 
+    // Update user's last complaint timestamp AFTER successful creation
+    await User.findByIdAndUpdate(userId, { lastComplaintAt: new Date() });
 
     res.status(201).json({
       status: 'success',

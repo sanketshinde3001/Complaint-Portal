@@ -39,6 +39,9 @@ const UserSchema = new mongoose.Schema({
   },
   verificationToken: String,
   verificationTokenExpires: Date,
+  // Timestamps for rate limiting
+  lastComplaintAt: Date,
+  lastPetitionAt: Date,
   createdAt: {
     type: Date,
     default: Date.now,

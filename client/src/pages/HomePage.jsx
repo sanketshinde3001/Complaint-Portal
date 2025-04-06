@@ -2,17 +2,15 @@ import React, { useState, useEffect, useContext, useRef, useCallback } from 'rea
 import api from '../services/api';
 import { AuthContext } from '../contexts/AuthContext';
 // Import necessary icons
-import { 
-  FaArrowUp, 
-  FaArrowDown, 
-  FaCommentAlt, 
-  FaShareAlt, 
-  FaSpinner, 
-  FaRegClock, 
-  FaUserCircle,
-  FaBookmark,
-  FaEllipsisH,
-  FaRegBookmark
+import {
+  FaArrowUp,
+  FaArrowDown,
+  FaCommentAlt,
+  FaShareAlt,
+  FaSpinner,
+  FaRegClock,
+  FaUserCircle
+  // Removed FaBookmark, FaEllipsisH, FaRegBookmark as they are no longer used
 } from 'react-icons/fa';
 import MediaCarousel from '../components/MediaCarousel';
 
@@ -31,23 +29,41 @@ const FilterButton = ({ value, label, currentFilter, setFilter }) => (
 );
 
 // Complaint Card Component to clean up main component
-const ComplaintCard = ({ complaint, user, handleVote, votingStates, showComingSoon, comingSoonState, timeAgo }) => {
-  const [saved, setSaved] = useState(false);
-  
+const ComplaintCard = ({ complaint, user, handleVote, votingStates, timeAgo }) => {
+  const [showCopiedMessage, setShowCopiedMessage] = useState(false); // State for copy confirmation
+
   // Safely check vote status
   const userHasUpvoted = user && Array.isArray(complaint.upvotedBy) && complaint.upvotedBy.includes(user._id);
   const userHasDownvoted = user && Array.isArray(complaint.downvotedBy) && complaint.downvotedBy.includes(user._id);
   const isVoting = votingStates[complaint._id];
 
-  const handleSave = () => {
-    setSaved(!saved);
-    // TODO: Implement save functionality with API
+  // --- Share Logic ---
+  const handleShareClick = () => {
+    const url = `${window.location.origin}/complaint/${complaint._id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShowCopiedMessage(true);
+      setTimeout(() => setShowCopiedMessage(false), 2000); // Hide message after 2 seconds
+    }).catch(err => {
+      console.error('Failed to copy link:', err);
+      alert('Failed to copy link.');
+    });
   };
+
+  // --- Navigation Logic (Keep for card click and comments button) ---
+  const openDetailPage = (e) => {
+     if (e.target.closest('button, a, .voting-column')) return;
+     window.open(`/complaint/${complaint._id}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const openDetailPageFromAction = () => {
+      window.open(`/complaint/${complaint._id}`, '_blank', 'noopener,noreferrer');
+  };
+
 
   return (
     <div className="flex bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-150 ease-in-out group">
       {/* Voting Column */}
-      <div className="flex flex-col items-center w-14 p-2 bg-gray-50 dark:bg-gray-900/30 space-y-1 flex-shrink-0">
+      <div className="voting-column flex flex-col items-center w-14 p-2 bg-gray-50 dark:bg-gray-900/30 space-y-1 flex-shrink-0">
         <button
           onClick={() => handleVote(complaint._id, 'upvote')}
           disabled={!user || isVoting}
@@ -88,12 +104,17 @@ const ComplaintCard = ({ complaint, user, handleVote, votingStates, showComingSo
       </div>
 
       {/* Complaint Content Area */}
-      <div className="flex-1 p-4 overflow-hidden">
+      <div
+        className="flex-1 p-4 overflow-hidden cursor-pointer group-hover:bg-gray-50/50 dark:group-hover:bg-gray-700/20 transition-colors duration-100"
+        onClick={openDetailPage}
+        role="link"
+        aria-label={`View details for complaint ${complaint._id}`}
+      >
         {/* Metadata Line */}
         <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center flex-wrap gap-x-2">
           <span className="flex items-center gap-1">
             <FaUserCircle className="inline-block text-gray-400" />
-            <span className="font-medium text-gray-700 dark:text-gray-300 hover:underline cursor-pointer">
+            <span className="font-medium text-gray-700 dark:text-gray-300">
               {complaint.author?.username || 'Anonymous'}
             </span>
           </span>
@@ -120,7 +141,11 @@ const ComplaintCard = ({ complaint, user, handleVote, votingStates, showComingSo
         {Array.isArray(complaint.tags) && complaint.tags.length > 0 && (
           <div className="mt-2 mb-3 flex flex-wrap gap-1">
             {complaint.tags.map(tag => (
-              <span key={tag} className="inline-block bg-gray-200 dark:bg-gray-700 rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+              <span
+                key={tag}
+                className="inline-block bg-gray-200 dark:bg-gray-700 rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-default"
+                onClick={(e) => e.stopPropagation()}
+              >
                 #{tag}
               </span>
             ))}
@@ -130,65 +155,34 @@ const ComplaintCard = ({ complaint, user, handleVote, votingStates, showComingSo
         {/* Action Bar */}
         <div className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
           {/* Comments Button */}
-          <div className="relative">
-            <button
-              onClick={() => showComingSoon(complaint._id, 'comment')}
-              className="flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-md transition-colors duration-150"
-              aria-label={`View comments for complaint ${complaint._id}`}
-            >
-              <FaCommentAlt />
-              <span>{complaint.commentCount || 0} Comments</span>
-            </button>
-            {comingSoonState.id === complaint._id && comingSoonState.type === 'comment' && (
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1.5 px-2 py-0.5 bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-900 text-xs rounded shadow-lg whitespace-nowrap z-10">
-                Coming soon...
-              </div>
-            )}
-          </div>
+          <button
+            onClick={openDetailPageFromAction}
+            className="flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-md transition-colors duration-150"
+            aria-label={`View comments for complaint ${complaint._id}`}
+          >
+            <FaCommentAlt />
+            <span>{complaint.commentCount || 0} Comments</span>
+          </button>
 
           {/* Share Button */}
           <div className="relative">
             <button
-              onClick={() => showComingSoon(complaint._id, 'share')}
+              onClick={handleShareClick}
               className="flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-md transition-colors duration-150"
               aria-label={`Share complaint ${complaint._id}`}
+              title="Copy link to complaint"
             >
               <FaShareAlt />
               <span>Share</span>
             </button>
-            {comingSoonState.id === complaint._id && comingSoonState.type === 'share' && (
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1.5 px-2 py-0.5 bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-900 text-xs rounded shadow-lg whitespace-nowrap z-10">
-                Coming soon...
+            {showCopiedMessage && (
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-0.5 bg-green-500 text-white text-xs rounded shadow-lg whitespace-nowrap z-10">
+                Link Copied!
               </div>
             )}
           </div>
-
-          {/* Save Button */}
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-md transition-colors duration-150"
-            aria-label={`Save complaint ${complaint._id}`}
-          >
-            {saved ? <FaBookmark className="text-blue-500" /> : <FaRegBookmark />}
-            <span>{saved ? 'Saved' : 'Save'}</span>
-          </button>
-
-          {/* More Options */}
-          <div className="relative ml-auto">
-            <button
-              onClick={() => showComingSoon(complaint._id, 'more')}
-              className="flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-md transition-colors duration-150"
-              aria-label="More options"
-            >
-              <FaEllipsisH />
-            </button>
-            {comingSoonState.id === complaint._id && comingSoonState.type === 'more' && (
-              <div className="absolute bottom-full right-0 mb-1.5 px-2 py-0.5 bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-900 text-xs rounded shadow-lg whitespace-nowrap z-10">
-                More options coming soon...
-              </div>
-            )}
-          </div>
-        </div>
+          {/* Removed Save and More Options buttons */}
+        </div> {/* End Action Bar */}
 
         {/* Admin Notes (Optional) */}
         {complaint.adminNotes && (
@@ -196,8 +190,8 @@ const ComplaintCard = ({ complaint, user, handleVote, votingStates, showComingSo
             <span className="font-semibold">Admin Note:</span> {complaint.adminNotes}
           </p>
         )}
-      </div>
-    </div>
+      </div> {/* End Complaint Content Area */}
+    </div> // End Card Container
   );
 };
 
@@ -209,49 +203,46 @@ function HomePage() {
   const [sortBy, setSortBy] = useState('new');
   const [timeFilter, setTimeFilter] = useState('all');
   const [votingStates, setVotingStates] = useState({});
-  const [comingSoonState, setComingSoonState] = useState({ id: null, type: null });
-  const comingSoonTimeoutRef = useRef(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
   // --- Data Fetching ---
   const fetchComplaints = useCallback(async (reset = false) => {
     const currentPage = reset ? 1 : page;
-    
+
     if (reset) {
       setPage(1);
       setComplaints([]);
     }
-    
+
     console.log(`Fetching complaints: sort=${sortBy}, time=${timeFilter}, page=${currentPage}`);
     setIsLoading(true);
     setError('');
-    
+
     try {
-      const params = new URLSearchParams({ 
+      const params = new URLSearchParams({
         sort: sortBy,
         page: currentPage,
         limit: 10
       });
-      
+
       if ((sortBy === 'top' || sortBy === 'best') && timeFilter !== 'all') {
         params.append('t', timeFilter);
       }
-      
+
       const response = await api.get(`/complaints?${params.toString()}`);
       const newComplaints = Array.isArray(response.data?.data?.complaints) ? response.data.data.complaints : [];
-      
+
       if (reset) {
         setComplaints(newComplaints);
       } else {
         setComplaints(prev => [...prev, ...newComplaints]);
       }
-      
-      // Check if we have more pages
+
       const totalComplaints = response.data?.total || 0;
-      const fetchedCount = (currentPage * 10);
+      const fetchedCount = complaints.length + newComplaints.length; // More accurate count
       setHasMore(fetchedCount < totalComplaints);
-      
+
     } catch (err) {
       console.error("Failed to fetch complaints:", err);
       const errorMsg = err.response?.data?.message || 'Failed to load complaints. Please check your connection and try again.';
@@ -259,7 +250,7 @@ function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, sortBy, timeFilter]);
+  }, [page, sortBy, timeFilter, complaints.length]); // Added complaints.length dependency
 
   // Load more complaints
   const loadMore = () => {
@@ -310,37 +301,17 @@ function HomePage() {
     }
   };
 
-  // --- "Coming Soon" Logic ---
-  const showComingSoon = (id, type) => {
-    if (comingSoonTimeoutRef.current) {
-      clearTimeout(comingSoonTimeoutRef.current);
-    }
-    setComingSoonState({ id, type });
-    comingSoonTimeoutRef.current = setTimeout(() => {
-      setComingSoonState({ id: null, type: null });
-      comingSoonTimeoutRef.current = null;
-    }, 2000);
-  };
-
-  // Clear timeout on component unmount
-  useEffect(() => {
-    return () => {
-      if (comingSoonTimeoutRef.current) {
-        clearTimeout(comingSoonTimeoutRef.current);
-      }
-    };
-  }, []);
-
   // --- Effects ---
   useEffect(() => {
     fetchComplaints(true); // Reset and fetch when filters change
-  }, [sortBy, timeFilter]);
+  }, [sortBy, timeFilter]); // Removed fetchComplaints from dependency array
 
   useEffect(() => {
     if (page > 1) {
       fetchComplaints(false); // Fetch more data when page changes
     }
-  }, [page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]); // Removed fetchComplaints from dependency array
 
   // --- Helper Functions ---
   const timeAgo = (dateString) => {
@@ -374,7 +345,7 @@ function HomePage() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="container mx-auto px-2 sm:px-4 py-4 max-w-3xl">
-        {/* Filtering UI - Reddit-style Card */}
+        {/* Filtering UI */}
         <div className="mb-6 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             {/* Sort By Buttons */}
@@ -385,7 +356,7 @@ function HomePage() {
               <FilterButton value="best" label="Best" currentFilter={sortBy} setFilter={setSortBy} />
             </div>
 
-            {/* Time Filter Buttons (Conditional) */}
+            {/* Time Filter Buttons */}
             {(sortBy === 'top' || sortBy === 'best') && (
               <div className="flex items-center flex-wrap gap-x-2 gap-y-2 sm:border-l sm:border-gray-300 sm:dark:border-gray-600 sm:pl-4">
                 <span className="font-semibold text-sm text-gray-600 dark:text-gray-400 mr-2 whitespace-nowrap">Time:</span>
@@ -398,7 +369,7 @@ function HomePage() {
           </div>
         </div>
 
-        {/* Loading State - Initial */}
+        {/* Loading State */}
         {isLoading && complaints.length === 0 && (
           <div className="text-center mt-16">
             <FaSpinner className="animate-spin text-5xl text-orange-500 mx-auto" />
@@ -414,7 +385,7 @@ function HomePage() {
           </div>
         )}
 
-        {/* No Complaints Found State */}
+        {/* No Complaints Found */}
         {!isLoading && complaints.length === 0 && !error && (
           <div className="text-center mt-16 text-gray-500 dark:text-gray-400">
             <FaCommentAlt className="text-6xl mx-auto mb-4 text-gray-400 dark:text-gray-500" />
@@ -427,18 +398,16 @@ function HomePage() {
         {complaints.length > 0 && (
           <div className="space-y-4">
             {complaints.map((complaint) => (
-              <ComplaintCard 
+              <ComplaintCard
                 key={complaint._id}
                 complaint={complaint}
                 user={user}
                 handleVote={handleVote}
                 votingStates={votingStates}
-                showComingSoon={showComingSoon}
-                comingSoonState={comingSoonState}
                 timeAgo={timeAgo}
               />
             ))}
-            
+
             {/* Load More Button */}
             {hasMore && (
               <div className="flex justify-center mt-6 mb-8">
@@ -458,7 +427,7 @@ function HomePage() {
                 </button>
               </div>
             )}
-            
+
             {/* End of results message */}
             {!hasMore && complaints.length > 0 && (
               <div className="text-center py-6 text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">

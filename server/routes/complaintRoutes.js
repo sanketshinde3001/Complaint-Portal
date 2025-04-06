@@ -2,6 +2,8 @@ const express = require('express');
 const complaintController = require('../controllers/complaintController');
 const authMiddleware = require('../middleware/authMiddleware');
 const uploadMiddleware = require('../middleware/uploadMiddleware');
+const rateLimitMiddleware = require('../middleware/rateLimitMiddleware'); // Import rate limit middleware
+const commentRouter = require('./commentRoutes'); // Import the comment router
 
 const router = express.Router();
 
@@ -17,8 +19,9 @@ router.route('/')
     // Logging removed
     // 2. Upload files from memory to Cloudinary (populates req.body.mediaUrls)
     uploadMiddleware.uploadToCloudinary,
-    // 3. NOW ensure user is logged in (populates req.user)
+    // 3. NOW ensure user is logged in (populates req.user) AND check rate limit
     authMiddleware.protect,
+    rateLimitMiddleware.limitComplaintCreation, // Apply rate limit middleware
     // 4. Proceed to create the complaint (needs req.body and req.user)
     complaintController.createComplaint
   );
@@ -31,6 +34,10 @@ router.route('/:id')
 // Apply protect middleware as users must be logged in to vote
 router.post('/:id/upvote', authMiddleware.protect, complaintController.upvoteComplaint);
 router.post('/:id/downvote', authMiddleware.protect, complaintController.downvoteComplaint);
+
+// --- Nested Comment Routes ---
+// Mount the comment router for requests like /api/complaints/:complaintId/comments
+router.use('/:complaintId/comments', commentRouter);
 
 
 // TODO: Add routes for users to potentially update/delete their own complaints (if feature is desired) - Apply protect middleware here too

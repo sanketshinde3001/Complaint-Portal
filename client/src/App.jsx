@@ -7,7 +7,12 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import SubmitComplaintPage from './pages/SubmitComplaintPage';
+import ComplaintDetailPage from './pages/ComplaintDetailPage';
+import CreatePetitionPage from './pages/CreatePetitionPage'; // Import Create Petition page
+import PetitionsListPage from './pages/PetitionsListPage';   // Import Petitions List page
+import PetitionDetailPage from './pages/PetitionDetailPage'; // Import Petition Detail page
 import AdminDashboardPage from './pages/AdminDashboardPage';
+// TODO: Import AdminPetitionsPage if implementing admin UI
 import NotFoundPage from './pages/NotFoundPage';
 
 // Import Components
@@ -28,6 +33,10 @@ function App() {
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}> {/* Routes requiring login */}
             <Route path="/submit-complaint" element={<SubmitComplaintPage />} />
+            <Route path="/complaint/:id" element={<ComplaintDetailPage />} />
+            <Route path="/petitions" element={<PetitionsListPage />} /> {/* List approved petitions */}
+            <Route path="/petitions/new" element={<CreatePetitionPage />} /> {/* Create new petition */}
+            <Route path="/petition/:id" element={<PetitionDetailPage />} /> {/* View single petition */}
           </Route>
 
           <Route element={<ProtectedRoute adminOnly={true} />}> {/* Routes requiring admin role */}
