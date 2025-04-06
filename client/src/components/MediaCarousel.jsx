@@ -1,16 +1,47 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaChevronLeft, FaChevronRight, FaExpand } from 'react-icons/fa';
+
+import { FaChevronLeft, FaChevronRight, FaExpand, FaSpinner, FaExclamationTriangle } from 'react-icons/fa'; // Added spinner/error
 
 function MediaCarousel({ mediaUrls }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [errorLoading, setErrorLoading] = useState(false); // State for loading errors
+  // Removed dimensions state as it wasn't used
   const containerRef = useRef(null);
-  
+  const mediaRef = useRef(null); // Ref for the img/video element
+
+  // Effect to check loading status when index changes
   useEffect(() => {
-    // Reset loading state when media changes
-    setIsLoading(true);
-  }, [currentIndex]);
+    setErrorLoading(false); // Reset error on slide change
+    const mediaElement = mediaRef.current;
+    const currentUrl = mediaUrls[currentIndex];
+    const isImage = /\.(jpe?g|png|gif|webp|bmp)$/i.test(currentUrl);
+    const isVideo = /\.(mp4|webm|ogg|mov|avi|quicktime)$/i.test(currentUrl);
+
+    if (mediaElement) {
+        // Check if the element source matches the current URL to avoid stale checks
+        if (mediaElement.src !== currentUrl) {
+             // Source is changing, assume loading
+             setIsLoading(true);
+             return;
+        }
+
+        // Check loaded status based on type
+        if (isImage) {
+            // For images, check if naturalWidth > 0 (already loaded/cached)
+             setIsLoading(!mediaElement.complete || mediaElement.naturalWidth === 0);
+        } else if (isVideo) {
+            // For videos, check readyState (>= 2 means metadata loaded, >= 3 means data available)
+            setIsLoading(mediaElement.readyState < 2);
+        } else {
+            // Unsupported type, stop loading indicator
+            setIsLoading(false);
+        }
+    } else {
+        // Element not rendered yet, assume loading
+        setIsLoading(true);
+    }
+  }, [currentIndex, mediaUrls]); // Rerun when index or the media list changes
 
   if (!mediaUrls || mediaUrls.length === 0) {
     return null;
@@ -40,6 +71,13 @@ function MediaCarousel({ mediaUrls }) {
 
   const handleMediaLoad = () => {
     setIsLoading(false);
+    setErrorLoading(false); // Clear error on successful load
+  };
+
+  const handleMediaError = () => {
+    console.error("Failed to load media:", currentUrl);
+    setIsLoading(false);
+    setErrorLoading(true); // Set error state
   };
 
   const currentUrl = mediaUrls[currentIndex];
@@ -54,30 +92,43 @@ function MediaCarousel({ mediaUrls }) {
       tabIndex="0"
       onKeyDown={handleKeyDown}
     >
-      {/* Loading indicator */}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-10">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      {/* Loading/Error Overlay */}
+      {(isLoading || errorLoading) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-80 z-10">
+          {isLoading && !errorLoading && (
+             <FaSpinner className="animate-spin text-3xl text-blue-400" />
+          )}
+          {errorLoading && (
+             <div className="text-center text-red-400">
+                <FaExclamationTriangle className="text-3xl mx-auto mb-2"/>
+                <p className="text-sm">Failed to load media</p>
+             </div>
+          )}
         </div>
       )}
-      
+
       {/* Media Item */}
       <div className="w-full h-full flex items-center justify-center">
         {isImage ? (
           <img
             src={currentUrl}
             alt={`Complaint media ${currentIndex + 1}`}
-            className="max-w-full max-h-full object-contain"
-            loading="lazy"
+            className={`max-w-full max-h-full object-contain transition-opacity duration-300 ${isLoading || errorLoading ? 'opacity-0' : 'opacity-100'}`} // Fade in on load
+            loading="lazy" // Native lazy loading
             onLoad={handleMediaLoad}
+            onError={handleMediaError} // Handle image load errors
+            ref={mediaRef} // Attach ref
           />
         ) : isVideo ? (
           <video
+            key={currentUrl} // Add key to force re-render on src change if needed
             src={currentUrl}
             controls
-            className="max-w-full max-h-full object-contain"
+            className={`max-w-full max-h-full object-contain transition-opacity duration-300 ${isLoading || errorLoading ? 'opacity-0' : 'opacity-100'}`} // Fade in on load
             preload="metadata"
             onLoadedData={handleMediaLoad}
+            onError={handleMediaError} // Handle video load errors
+            ref={mediaRef} // Attach ref
           >
             Your browser does not support the video tag.
           </video>

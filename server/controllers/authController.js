@@ -13,16 +13,27 @@ const signToken = (id) => {
   });
 };
 
-// Helper function to create and send JWT via cookie (optional, can also send in response body)
+// Helper function to create and send JWT via HTTP-Only cookie
 const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
 
-  // Remove password from output
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + 90 * 24 * 60 * 60 * 1000 // Expires in 90 days (match token expiry)
+    ),
+    httpOnly: true, // Cannot be accessed or modified by the browser JavaScript
+    secure: process.env.NODE_ENV === 'production', // Send only over HTTPS in production
+    // sameSite: 'strict' // Consider adding for CSRF protection if applicable
+  };
+
+  res.cookie('jwt', token, cookieOptions);
+
+  // Remove password from output before sending user data
   user.password = undefined;
 
   res.status(statusCode).json({
     status: 'success',
-    token,
+    // No longer sending token in the body
     data: {
       user,
     },
@@ -217,5 +228,131 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error('Login Error:', err);
     res.status(500).json({ status: 'error', message: 'An error occurred during login.' });
+  }
+};
+
+// Get current user based on cookie/token
+exports.getMe = (req, res, next) => {
+  // The 'protect' middleware already attached the user to req.user
+  // We just need to send it back
+  if (!req.user) {
+     return res.status(401).json({ status: 'fail', message: 'User not found or not logged in.' });
+  }
+  res.status(200).json({
+    status: 'success',
+    data: {
+      user: req.user
+    }
+  });
+};
+
+// Logout user by clearing the cookie
+exports.logout = (req, res) => {
+  res.cookie('jwt', 'loggedout', {
+    expires: new Date(Date.now() + 10 * 1000), // Expires in 10 seconds
+    httpOnly: true
+  });
+  res.status(200).json({ status: 'success' });
+};
+
+// --- Forgot/Reset Password ---
+
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    // 1) Get user based on POSTed email
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) {
+      // Send generic success message even if user not found for security
+      return res.status(200).json({ status: 'success', message: 'If an account with that email exists, a password reset link has been sent.' });
+    }
+
+    // 2) Generate the random reset token (different from verification token)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Store the hashed token in the DB for security (optional but recommended)
+    // user.passwordResetToken = crypto
+    //   .createHash('sha256')
+    //   .update(resetToken)
+    //   .digest('hex');
+    // For simplicity now, store raw token (less secure if DB is compromised)
+    user.passwordResetToken = resetToken;
+    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // Token expires in 10 minutes
+
+    await user.save({ validateBeforeSave: false }); // Save changes, skip validation if needed
+
+    // 3) Send token back to user's email
+    const resetURL = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!\nThis link expires in 10 minutes.`;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Your Password Reset Token (valid for 10 min)',
+        message
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Password reset token sent to email!'
+      });
+    } catch (err) {
+      console.error('Password Reset Email Error:', err);
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false }); // Clear tokens on email failure
+      return res.status(500).json({ status: 'error', message: 'There was an error sending the email. Try again later!' });
+    }
+  } catch (err) {
+     console.error('Forgot Password Error:', err);
+     res.status(500).json({ status: 'error', message: 'An error occurred.' });
+  }
+};
+
+exports.resetPassword = async (req, res, next) => {
+  try {
+    // 1) Get user based on the token
+    const resetToken = req.params.token;
+    // If storing hashed token:
+    // const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    // const user = await User.findOne({ passwordResetToken: hashedToken, passwordResetExpires: { $gt: Date.now() } });
+    // If storing raw token:
+    const user = await User.findOne({
+      passwordResetToken: resetToken,
+      passwordResetExpires: { $gt: Date.now() } // Check expiry
+    });
+
+    // 2) If token has not expired, and there is user, set the new password
+    if (!user) {
+      return res.status(400).json({ status: 'fail', message: 'Token is invalid or has expired.' });
+    }
+
+    const { password, passwordConfirm } = req.body;
+
+    if (!password || !passwordConfirm) {
+         return res.status(400).json({ status: 'fail', message: 'Please provide password and password confirmation.' });
+    }
+     if (password !== passwordConfirm) {
+      return res.status(400).json({ status: 'fail', message: 'Passwords do not match.' });
+    }
+
+    // Update password (pre-save hook will hash it)
+    user.password = password;
+    user.passwordResetToken = undefined; // Clear reset fields
+    user.passwordResetExpires = undefined;
+    // Optional: Add passwordChangedAt field and update it here for security checks in protect middleware
+    // user.passwordChangedAt = Date.now() - 1000; // Set slightly in past
+
+    await user.save(); // This triggers the pre-save hook for hashing
+
+    // 3) Log the user in, send JWT
+    createSendToken(user, 200, res);
+
+  } catch (err) {
+    console.error('Reset Password Error:', err);
+     if (err.name === 'ValidationError') {
+        const messages = Object.values(err.errors).map(el => el.message);
+        return res.status(400).json({ status: 'fail', message: `Invalid input data. ${messages.join('. ')}` });
+    }
+    res.status(500).json({ status: 'error', message: 'An error occurred while resetting the password.' });
   }
 };

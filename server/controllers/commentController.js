@@ -95,8 +95,13 @@ exports.createComment = handleAsync(async (req, res, next) => {
             comment: populatedComment,
         },
     });
+
+    // 5. Increment comment count on the parent complaint
+    await Complaint.findByIdAndUpdate(complaintId, { $inc: { commentCount: 1 } });
+
 });
 
 // TODO: Add controllers for updating/deleting comments if needed
+// Remember to decrement commentCount in deleteComment
 // exports.updateComment = handleAsync(async (req, res, next) => { ... });
 // exports.deleteComment = handleAsync(async (req, res, next) => { ... });

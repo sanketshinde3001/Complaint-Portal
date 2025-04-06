@@ -72,7 +72,26 @@ const ComplaintSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  // Denormalized comment count
+  commentCount: {
+    type: Number,
+    default: 0
+  }
+}, { // Schema Options
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
+
+// Virtual property for comment count (less efficient than denormalization)
+// This requires fetching comments separately or using aggregation if needed frequently in lists.
+// A better approach for lists is often to denormalize (store commentCount directly on Complaint).
+// ComplaintSchema.virtual('commentCount', {
+//   ref: 'Comment',
+//   foreignField: 'complaint',
+//   localField: '_id',
+//   count: true
+// });
+// Remove or keep commented out virtual property
 
 // Indexing common query fields can improve performance
 ComplaintSchema.index({ status: 1, tags: 1 });

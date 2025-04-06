@@ -31,8 +31,9 @@ function LoginPage() {
         password: formData.password,
       });
 
-      const { token, data } = response.data;
-      login(data.user, token);
+      // The token is now handled by the HTTP-only cookie set by the server
+      const { data } = response.data; // Only need user data from response
+      login(data.user); // Pass only user data to the context login function
       navigate(data.user.role === 'admin' ? '/admin' : '/');
 
     } catch (err) {

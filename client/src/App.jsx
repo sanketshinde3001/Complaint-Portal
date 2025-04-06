@@ -9,8 +9,10 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import SubmitComplaintPage from './pages/SubmitComplaintPage';
 import ComplaintDetailPage from './pages/ComplaintDetailPage';
 import CreatePetitionPage from './pages/CreatePetitionPage'; // Import Create Petition page
-import PetitionsListPage from './pages/PetitionsListPage';   // Import Petitions List page
-import PetitionDetailPage from './pages/PetitionDetailPage'; // Import Petition Detail page
+import PetitionsListPage from './pages/PetitionsListPage';
+import PetitionDetailPage from './pages/PetitionDetailPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage'; // Import Forgot Password page
+import ResetPasswordPage from './pages/ResetPasswordPage';   // Import Reset Password page
 import AdminDashboardPage from './pages/AdminDashboardPage';
 // TODO: Import AdminPetitionsPage if implementing admin UI
 import NotFoundPage from './pages/NotFoundPage';
@@ -28,6 +30,8 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} /> {/* Forgot Password Route */}
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} /> {/* Reset Password Route */}
           <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
 
           {/* Protected Routes */}

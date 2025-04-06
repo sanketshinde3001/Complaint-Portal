@@ -5,6 +5,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 // Removed mongoSanitize import as it causes errors
 const rateLimit = require('express-rate-limit'); // Import rate-limit
+const cookieParser = require('cookie-parser'); // Import cookie-parser
+const compression = require('compression'); // Import compression
 
 // Load environment variables
 dotenv.config();
@@ -12,6 +14,10 @@ dotenv.config();
 const app = express();
 
 // --- Middleware ---
+// Compress all responses
+app.use(compression());
+
+// Enable CORS
 app.use(cors({
   origin: [
     'https://complaint-portal-pi.vercel.app',
@@ -20,11 +26,8 @@ app.use(cors({
   credentials: true
 }));
 
-// Debug logger middleware
-app.use((req, res, next) => {
-  console.log(`API HIT: ${req.method} ${req.originalUrl}`);
-  next();
-});
+// Parse cookies BEFORE security middleware that might use them
+app.use(cookieParser());
 
 // --- Security Middleware ---
 // Set security HTTP headers
@@ -44,12 +47,26 @@ const apiLimiter = rateLimit({
     // Optional: skip successful OPTIONS requests (useful for CORS preflight)
     // skipSuccessfulRequests: true,
 });
-app.use('/api/v1', apiLimiter); // Apply the limiter to all API routes
+// Apply the limiter to all API routes (consider if needed before static files/root)
+app.use('/api/v1', apiLimiter);
 
 
 // Apply global JSON parser BEFORE routes that need it
 // Increase payload size limit (e.g., 10kb for JSON, adjust as needed)
 app.use(express.json({ limit: '10kb' }));
+
+// Debug logger middleware (Place after parsers if you want to log parsed body/cookies)
+app.use((req, res, next) => {
+  console.log(`API HIT: ${req.method} ${req.originalUrl}`);
+  // console.log('Cookies:', req.cookies); // Optional: Log cookies
+  // console.log('Body:', req.body); // Optional: Log body
+  next();
+});
+
+
+app.get("/api/v1",(req,res)=>{
+  res.send("hi")
+})
 
 
 // --- Routes ---
@@ -59,9 +76,9 @@ const petitionRouter = require('./routes/petitionRoutes'); // Import petition ro
 const adminRouter = require('./routes/adminRoutes'); // Handles admin-specific petition routes too
 
 // Register routers
+app.use('/api/v1/auth', authRouter); // Auth routes first potentially
 app.use('/api/v1/complaints', complaintRouter); // Multer within this router handles multipart for specific routes
 app.use('/api/v1/petitions', petitionRouter); // Mount petition routes
-app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/admin', adminRouter);
 
 // Static file serving

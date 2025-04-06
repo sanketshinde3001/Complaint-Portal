@@ -8,14 +8,15 @@ router.post('/signup', authController.signup);
 router.post('/login', authController.login);
 router.get('/verify-email/:token', authController.verifyEmail);
 router.post('/resend-verification', authController.resendVerificationEmail); // Add route for resend
+router.post('/logout', authController.logout); // Use POST for logout to clear cookie
 
-// Example of a protected route (e.g., get current user profile)
-// We might move profile-related routes elsewhere later
-// const authMiddleware = require('../middleware/authMiddleware');
-// router.get('/me', authMiddleware.protect, (req, res) => {
-//   res.status(200).json({ status: 'success', data: { user: req.user } });
-// });
+// Protected route to get current user info (relies on cookie)
+const authMiddleware = require('../middleware/authMiddleware');
+router.get('/me', authMiddleware.protect, authController.getMe);
 
-// TODO: Add routes for password reset, resend verification email, etc. if needed
+// Password Reset Routes
+router.post('/forgotPassword', authController.forgotPassword);
+router.patch('/resetPassword/:token', authController.resetPassword); // Use PATCH to update password
+
 
 module.exports = router;
