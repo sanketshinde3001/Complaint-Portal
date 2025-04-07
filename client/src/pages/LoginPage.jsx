@@ -34,7 +34,8 @@ function LoginPage() {
       // The token is now handled by the HTTP-only cookie set by the server
       const { data } = response.data; // Only need user data from response
       login(data.user); // Pass only user data to the context login function
-      navigate(data.user.role === 'admin' ? '/admin' : '/');
+      // Redirect to '/home' for regular users, '/admin' for admins
+      navigate(data.user.role === 'admin' ? '/admin' : '/home');
 
     } catch (err) {
       console.error("Login failed:", err);

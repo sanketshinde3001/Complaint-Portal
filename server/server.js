@@ -71,14 +71,16 @@ app.get("/api/v1",(req,res)=>{
 
 // --- Routes ---
 const authRouter = require('./routes/authRoutes');
-const complaintRouter = require('./routes/complaintRoutes'); // Handles both multipart and JSON (nested)
-const petitionRouter = require('./routes/petitionRoutes'); // Import petition router
-const adminRouter = require('./routes/adminRoutes'); // Handles admin-specific petition routes too
+const complaintRouter = require('./routes/complaintRoutes');
+const petitionRouter = require('./routes/petitionRoutes');
+const activityRouter = require('./routes/activityRoutes'); // Import activity router
+const adminRouter = require('./routes/adminRoutes');
 
 // Register routers
-app.use('/api/v1/auth', authRouter); // Auth routes first potentially
-app.use('/api/v1/complaints', complaintRouter); // Multer within this router handles multipart for specific routes
-app.use('/api/v1/petitions', petitionRouter); // Mount petition routes
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/complaints', complaintRouter);
+app.use('/api/v1/petitions', petitionRouter);
+app.use('/api/v1/activity', activityRouter); // Mount activity routes
 app.use('/api/v1/admin', adminRouter);
 
 // Static file serving

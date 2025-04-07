@@ -31,13 +31,15 @@ function Navbar() {
     );
   }
 
+  const logoLinkTarget = isLoggedIn ? "/home" : "/"; // Dynamic logo link
+
   return (
     <nav className="bg-gray-900 text-gray-200 py-4 px-6 shadow-lg border-b border-gray-800">
       <div className="container mx-auto flex flex-wrap justify-between items-center">
-        <Link to="/" className="text-xl font-bold text-blue-400 hover:text-blue-300 transition-colors duration-200">
-          Student Corner
+        <Link to={logoLinkTarget} className="text-xl font-bold text-blue-400 hover:text-blue-300 transition-colors duration-200">
+          Complaint Portal
         </Link>
-        
+
         {/* Mobile menu button */}
         <button 
           className="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 focus:outline-none"
@@ -56,9 +58,10 @@ function Navbar() {
         {/* Desktop Navigation */}
         <div className={`w-full lg:flex lg:items-center lg:w-auto ${isMenuOpen ? 'block' : 'hidden'} lg:block mt-4 lg:mt-0`}>
           <ul className="flex flex-col lg:flex-row lg:space-x-6 space-y-2 lg:space-y-0 items-start lg:items-center">
+            {/* Home link now points to /home */}
             <li className="w-full lg:w-auto">
               <NavLink
-                to="/"
+                to="/home"
                 className={({ isActive }) =>
                   `block py-1 ${isActive ? activeLinkClass : normalLinkClass}`
                 }

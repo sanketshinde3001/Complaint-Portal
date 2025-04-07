@@ -112,6 +112,16 @@ export const deletePetitionAdmin = (petitionId) => {
   return api.delete(`/admin/petitions/${petitionId}`);
 };
 
+// --- Activity API Functions ---
+
+/**
+ * Fetches recent public activity.
+ * @returns {Promise<object>} - The API response data.
+ */
+export const getRecentActivity = () => {
+  return api.get('/activity/recent');
+};
+
 
 // Export the configured instance as default AND named exports for functions
 export default api;

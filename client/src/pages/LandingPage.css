@@ -1,0 +1,27 @@
+/* LandingPage.css */
+
+/* Enter animation: Start from bottom, fade in */
+.activity-item-enter {
+  opacity: 0;
+  transform: translateY(100%);
+}
+.activity-item-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 1000ms ease-out; /* Match timeout in JS */
+}
+
+/* Exit animation: Move up, fade out */
+.activity-item-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+.activity-item-exit-active {
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: all 1000ms ease-in; /* Match timeout in JS */
+  /* Keep element in flow during exit for smoother transition */
+  position: absolute;
+  width: calc(100% - 0.5rem); /* Adjust based on parent padding if needed */
+  left: 0.25rem; /* Adjust based on parent padding if needed */
+}

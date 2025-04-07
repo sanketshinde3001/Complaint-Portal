@@ -1,7 +1,8 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 
-// Import Pages (placeholders for now)
+// Import Pages
+import LandingPage from './pages/LandingPage'; // Import Landing Page
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -25,20 +26,22 @@ function App() {
   return (
     <>
       <Navbar /> {/* Display Navbar on all pages */}
-      <main className="container mx-auto p-4">
+      {/* Remove container/padding from main if LandingPage handles its own layout */}
+      <main>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<LandingPage />} /> {/* Landing page at root */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} /> {/* Forgot Password Route */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} /> {/* Reset Password Route */}
           <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}> {/* Routes requiring login */}
+            <Route path="/home" element={<HomePage />} /> {/* Main app home */}
             <Route path="/submit-complaint" element={<SubmitComplaintPage />} />
             <Route path="/complaint/:id" element={<ComplaintDetailPage />} />
-            <Route path="/petitions" element={<PetitionsListPage />} /> {/* List approved petitions */}
+            <Route path="/petitions" element={<PetitionsListPage />} />
             <Route path="/petitions/new" element={<CreatePetitionPage />} /> {/* Create new petition */}
             <Route path="/petition/:id" element={<PetitionDetailPage />} /> {/* View single petition */}
           </Route>
